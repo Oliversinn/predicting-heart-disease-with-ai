@@ -1,0 +1,184 @@
+---
+title: "MAS 646 Initial Report:"
+author: "Ana Raquel Chacin, Oliver Mazariegos, Shannon Land, Mariana Gomez Del Nogal"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 7
+    number_sections: yes
+  html_document:
+    df_print: paged
+linestretch: 1
+always_allow_html: yes
+fontsize: 12pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+# Load dataset
+df = read.csv("cleaned_merged_heart_dataset.csv")
+# Set categorical variables
+## Sex 1 = Male, 0 = Female
+df$sex = factor(
+  df$sex,
+  levels = c(0,1),
+  labels = c("Female", "Male")
+)
+df$cp = factor(
+  df$cp,
+  levels = c(0,1,2,3),
+  labels = c("Typical angina", "Atypical angina", "Non-anginal pain", "Asymptomatic")
+)
+df$fbs = factor(
+  df$fbs,
+  levels = c(0,1),
+  labels = c("False", "True")
+)
+df$restecg = factor(
+  df$restecg,
+  levels = c(0,1,2),
+  labels = c("Normal", "ST-T wave abnormality", "Left ventricular hypertrophy")
+)
+df$exang = factor(
+  df$exang,
+  levels = c(0,1),
+  labels = c("No", "Yes")
+)
+df$slope = factor(
+  df$slope,
+  levels = c(0,1,2),
+  labels = c("Upsloping", "Flat", "Downsloping")
+)
+df$ca = factor(
+  df$ca,
+  levels = c(0,1,2,3),
+  labels = c("0", "1", "2", "3")
+)
+df$thal = factor(
+  df$thal,
+  levels = c(1,2,3),
+  labels = c("Normal", "Fixed defect", "Reversible defect")
+)
+df$target = factor(
+  df$target,
+  levels = c(0,1),
+  labels = c("No heart attack", "Heart attack")
+)
+
+```
+
+# Introduction
+
+# Dataset Description
+
+## Categorical Variables
+
+## Numerical Variables
+
+# Exploratory Data Analysis
+
+## Structure of Dataset
+
+```{r}
+str(df)
+```
+
+## Checking for Null Values
+
+```{r}
+sapply(df, function(x) sum(is.na(x)))
+```
+
+
+## Statistical Summary
+
+```{r}
+summary(df)
+```
+
+## Frequency Distributions
+
+```{r, fig.height=6}
+names = names(df)
+par(mfrow=c(3,2))
+for (i in c(1,4,5,8,10)) {
+  hist(df[, i], main = names[i], xlab=names[i], col = "lightblue")
+}
+```
+
+## Check for Normality
+
+```{r, fig.height=6}
+par(mfrow=c(3,2))
+for (i in c(1,4,5,8,10)) {
+  qqnorm(df[, i], main = names[i])
+  qqline(df[, i])
+}
+```
+
+## Pairwise Relationship: Numerical Predictors
+
+```{r, fig.height=7}
+par(mfrow=c(3,2))
+for (i in c(1,4,5,8,10)) {
+  boxplot(df[,i]~df$target,main=names[i],xlab="Target",ylab=names[i])
+}
+```
+
+
+## Pairwise Relationship: Categorical Predictors
+
+```{r, , fig.height=7}
+colors <- c("lightblue","lightpink")
+##Create percentage contingency table
+par(mfrow=c(3,3))
+for(i in c(2,3,6,7,9,11,12,13)){
+  tab <- table(df$target,df[,i])
+  prob.tab <- prop.table(tab,margin = 2)
+  barplot(prob.tab,beside=TRUE,xlab=names[i],col=colors)
+  if(i==2) legend(x=.7,y=0.7,legend=c("No heart attack","Heart attack"),fill=colors,bty='n')
+}
+```
+
+
+# Model Building
+
+## Simple Logistic Regression Model
+
+```{r}
+glmod <-glm(target~.,family="binomial",data=df)
+summary(glmod)
+```
+
+
+## Model Evaluation
+
+### Confusion Matrix
+
+```{r}
+## Find estimated probablities for all training data
+prob <- predict(glmod,newdata=df,type="response")
+pred.target <- as.factor(ifelse(prob>0.5,"Heart attack", "No heart attack"))
+#create the confusion matrix
+library(caret)
+c.matrix <- confusionMatrix(pred.target,df$target)
+c.matrix$table
+```
+
+
+### ROC & AUC
+
+```{r}
+library(pROC)
+###Create the ROC curve
+roc_glm <- roc(df$target~prob)
+plot(roc_glm)
+auc(roc_glm)
+```
+
+
